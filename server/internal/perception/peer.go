@@ -609,8 +609,6 @@ func normalizePeerAgent(s string) string {
 		return "claude_code"
 	case "copilot", "copilot-cli", "github-copilot":
 		return "copilot_cli"
-	case "open-code", "open code":
-		return "opencode"
 	}
 	return s
 }

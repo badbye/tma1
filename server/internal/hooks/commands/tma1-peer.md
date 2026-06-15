@@ -14,7 +14,7 @@ file carries the essential rules for the explicit-invocation path.
 
 - 1st token (optional) → agent name. Normalize:
   - `codex` → `codex`
-  - `opencode` / `open-code` → `opencode`
+  - `opencode` → `opencode`
   - `openclaw` → `openclaw`
   - `copilot` / `copilot_cli` → `copilot_cli`
   - `all` / `*` / empty → `""` (all peers, server excludes the caller)

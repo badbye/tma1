@@ -33,7 +33,6 @@ If neither is supplied, treat as `all` with count 1.
 | `claude`, `cc`    | `claude_code`                    |
 | `claude_code`     | `claude_code`                    |
 | `opencode`        | `opencode`                       |
-| `open-code`       | `opencode`                       |
 | `openclaw`        | `openclaw`                       |
 | `copilot`         | `copilot_cli`                    |
 | `copilot_cli`     | `copilot_cli`                    |

@@ -19,8 +19,6 @@ func TestNormalizePeerAgent(t *testing.T) {
 		{"codex", "codex"},
 		{"CODEX", "codex"},
 		{"opencode", "opencode"},
-		{"open-code", "opencode"},
-		{"open code", "opencode"},
 		{"openclaw", "openclaw"},
 		{"copilot", "copilot_cli"},     // alias
 		{"Copilot", "copilot_cli"},     // case-insensitive alias
@@ -199,7 +197,6 @@ func TestGetPeerSessions_RejectsCallerSelf(t *testing.T) {
 		{"codex", "codex"},
 		{"codex", "CODEX"},
 		{"opencode", "opencode"},
-		{"opencode", "open-code"},
 		{"openclaw", "openclaw"},
 		{"copilot_cli", "copilot"},
 		{"copilot_cli", "copilot-cli"},

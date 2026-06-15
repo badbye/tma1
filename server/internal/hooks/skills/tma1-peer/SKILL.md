@@ -34,7 +34,7 @@ copy-pasting it manually.
    - Second token (optional): count (integer 1-5).
 2. **Normalize the agent name**:
    - `codex` → `codex`
-   - `opencode` or `open-code` → `opencode`
+   - `opencode` → `opencode`
    - `openclaw` → `openclaw`
    - `copilot` or `copilot_cli` → `copilot_cli`
    - `all`, `*`, or empty → `""` (means all peers, excludes Claude Code)
