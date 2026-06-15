@@ -12,6 +12,7 @@ var dataSources = {
   hasGenAITraces: false,
   hasClaudeLogs: false,
   hasCodex: false,
+  hasOpenCode: false,
   ccMetrics: [],
   codexMetrics: [],
   hasHookEvents: false,
@@ -31,6 +32,7 @@ async function detectDataSources() {
       hasGenAITraces: false,
       hasClaudeLogs: false,
       hasCodex: false,
+      hasOpenCode: false,
       ccMetrics: tables.filter(function(t) { return t.startsWith('claude_code_'); }),
       codexMetrics: tables.filter(function(t) { return t.startsWith('codex_'); }),
       ocMetrics: tables.filter(function(t) { return t.startsWith('openclaw_'); }),
@@ -85,13 +87,16 @@ async function detectDataSources() {
         result.hasGenAITraces = true;
       }
     }
-    // Detect Copilot CLI sessions via hook events.
+    // Detect hook-only/plugin agents via hook events.
     if (result.hasHookEvents) {
       try {
-        var cpRes = await query(
-          "SELECT 1 FROM tma1_hook_events WHERE agent_source = 'copilot_cli' LIMIT 1"
+        var hookAgentRes = await query(
+          "SELECT agent_source FROM tma1_hook_events " +
+          "WHERE agent_source IN ('opencode','copilot_cli') GROUP BY agent_source"
         );
-        result.hasCopilotCLI = (rows(cpRes) || []).length > 0;
+        var hookAgents = (rows(hookAgentRes) || []).map(function(r) { return r[0]; });
+        result.hasOpenCode = hookAgents.includes('opencode');
+        result.hasCopilotCLI = hookAgents.includes('copilot_cli');
       } catch { /* ignore */ }
     }
     return result;
@@ -103,6 +108,7 @@ async function detectDataSources() {
       hasGenAITraces: false,
       hasClaudeLogs: false,
       hasCodex: false,
+      hasOpenCode: false,
       hasCopilotCLI: false,
       ccMetrics: [],
       codexMetrics: [],
@@ -183,10 +189,16 @@ async function switchView(viewId, skipHash) {
     btn.classList.toggle('active', btn.dataset.view === viewId);
   });
 
-  var viewEl = document.getElementById('view-' + viewId);
+  var effectiveViewId = viewId === 'opencode' ? 'sessions' : viewId;
+  var viewEl = document.getElementById('view-' + effectiveViewId);
   if (viewEl) {
     var hasData = true;
-    if (viewId === 'claude-code') {
+    if (viewId === 'opencode') {
+      var sourceFilter = document.getElementById('sess-source-filter');
+      if (sourceFilter) sourceFilter.value = 'opencode';
+      hasData = await sess_loadCards();
+      if (hasData) sess_loadList();
+    } else if (viewId === 'claude-code') {
       hasData = await cc_loadCards();
       cc_loadTraceCardsExistence();
       if (hasData) cc_loadOverview();
@@ -246,6 +258,7 @@ async function initViews() {
   var views = [];
   if (hasCCView) views.push({ id: 'claude-code', label: t('view.claude_code') });
   if (dataSources.hasCodex) views.push({ id: 'codex', label: t('view.codex') });
+  if (dataSources.hasOpenCode) views.push({ id: 'opencode', label: t('view.opencode') });
   if (dataSources.hasOpenClaw) views.push({ id: 'openclaw', label: t('view.openclaw') });
   if (dataSources.hasCopilotCLI) views.push({ id: 'copilot-cli', label: t('view.copilot_cli') });
   if (dataSources.hasGenAITraces) views.push({ id: 'traces', label: t('view.otel_genai') });

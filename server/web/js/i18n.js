@@ -475,6 +475,7 @@ var I18N = {
     // View tabs
     'view.claude_code': 'Claude Code',
     'view.codex': 'Codex',
+    'view.opencode': 'OpenCode',
     'view.openclaw': 'OpenClaw',
     'view.otel_genai': 'OTel GenAI',
     'view.sessions': 'Sessions',
@@ -1050,6 +1051,7 @@ var I18N = {
     'ui.cache_hit_bar': '% 命中',
     'view.claude_code': 'Claude Code',
     'view.codex': 'Codex',
+    'view.opencode': 'OpenCode',
     'view.openclaw': 'OpenClaw',
     'view.otel_genai': 'OTel GenAI',
     'view.sessions': 'Sessions',
