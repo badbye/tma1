@@ -60,6 +60,7 @@ Environment:
 Examples:
   tma1-server                                      # start the long-running server
   tma1-server install --adapter claude-code        # wire Claude Code into TMA1
+  tma1-server install --adapter opencode           # wire OpenCode into TMA1
   tma1-server build -- make test                   # ship build output to TMA1
   tma1-server help build                           # see all build flags
 
@@ -69,16 +70,17 @@ See https://tma1.ai for full documentation.
 const installHelpText = `Usage: tma1-server install [flags]
 
 Install TMA1 into a coding agent. Writes:
-  - hook script (~/.tma1/bin/tma1-hook.sh)
+  - hook script or native plugin (~/.tma1/hooks or ~/.config/opencode/plugins)
   - adapter settings entry (~/.claude/settings.json for claude-code,
-    ~/.codex/config.toml for codex) that registers the hook
+    ~/.codex/config.toml for codex, ~/.config/opencode/opencode.json
+    for opencode) that registers the hook/plugin and MCP
   - MCP server entry pointing at "tma1-server mcp-serve"
   - embedded skill + slash command files for the adapter
   - when run inside a project: a CLAUDE.md / AGENTS.md instructions
     block and a .gitignore entry for ~/.tma1 data files
 
 Flags:
-  --adapter NAME           claude-code | codex (default claude-code)
+  --adapter NAME           claude-code | codex | opencode (default claude-code)
   --project DIR            Project directory (default: current working
                            directory)
   --skip-project-files     Skip the CLAUDE.md/AGENTS.md block and the
@@ -90,6 +92,7 @@ Flags:
 Examples:
   tma1-server install --adapter claude-code
   tma1-server install --adapter codex --project ~/work/myrepo
+  tma1-server install --adapter opencode --project ~/work/myrepo
   tma1-server install --adapter claude-code --dry-run
 `
 
@@ -105,7 +108,7 @@ block. The .gitignore line and ~/.tma1/data are left in place unless
 uninstalling the wrong agent outweighs the convenience of guessing.
 
 Flags:
-  --adapter NAME    claude-code | codex (required)
+  --adapter NAME    claude-code | codex | opencode (required)
   --project DIR     Project directory (default: current working directory)
   -n, --dry-run     Print what would be removed without touching disk
   --purge-data      Also delete ~/.tma1/data (irreversible)
@@ -114,6 +117,7 @@ Flags:
 Examples:
   tma1-server uninstall --adapter claude-code --dry-run
   tma1-server uninstall --adapter codex --purge-data
+  tma1-server uninstall --adapter opencode
 `
 
 const buildHelpText = `Usage: tma1-server build [flags] [--] <command> [args...]
@@ -780,8 +784,17 @@ func runInstall(args []string) error {
 			Logger:             logger,
 			DryRun:             dryRun,
 		}
+	case "opencode":
+		inst = &hooks.OpenCodeInstaller{
+			DataDir:            cfg.DataDir,
+			Port:               port,
+			GreptimeDBHTTPPort: cfg.GreptimeDBHTTPPort,
+			ProjectDir:         project,
+			Logger:             logger,
+			DryRun:             dryRun,
+		}
 	default:
-		return fmt.Errorf("adapter %q not supported (available: claude-code, codex)", adapter)
+		return fmt.Errorf("adapter %q not supported (available: claude-code, codex, opencode)", adapter)
 	}
 	rep, installErr := inst.Install()
 
@@ -790,7 +803,9 @@ func runInstall(args []string) error {
 	} else {
 		fmt.Printf("TMA1 install report (adapter=%s)\n", adapter)
 	}
-	fmt.Printf("  Hook script:   %s\n", rep.HookScript)
+	if rep.HookScript != "" {
+		fmt.Printf("  Hook script:   %s\n", rep.HookScript)
+	}
 	fmt.Printf("  Settings:      %s\n", rep.SettingsPath)
 	if rep.InstructionsPath != "" {
 		fmt.Printf("  Instructions:  %s\n", rep.InstructionsPath)
@@ -871,7 +886,7 @@ func runUninstall(args []string) error {
 		}
 	}
 	if adapter == "" {
-		return fmt.Errorf("--adapter is required (claude-code|codex)")
+		return fmt.Errorf("--adapter is required (claude-code|codex|opencode)")
 	}
 
 	cfg, err := config.Load()
@@ -902,8 +917,16 @@ func runUninstall(args []string) error {
 			DryRun:     dryRun,
 			PurgeData:  purgeData,
 		}
+	case "opencode":
+		unin = &hooks.OpenCodeUninstaller{
+			DataDir:    cfg.DataDir,
+			ProjectDir: project,
+			Logger:     logger,
+			DryRun:     dryRun,
+			PurgeData:  purgeData,
+		}
 	default:
-		return fmt.Errorf("adapter %q not supported (available: claude-code, codex)", adapter)
+		return fmt.Errorf("adapter %q not supported (available: claude-code, codex, opencode)", adapter)
 	}
 
 	rep, uninstallErr := unin.Uninstall()

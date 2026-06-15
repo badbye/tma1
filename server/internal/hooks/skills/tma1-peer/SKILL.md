@@ -1,6 +1,6 @@
 ---
 name: tma1-peer
-description: "Pull recent session content from peer coding agents (Codex, OpenClaw, Copilot CLI) that worked on the same project. Invoke when the user wants you to read another agent's review feedback, see what someone else tried, or act on cross-agent context. Trigger phrases: \"what did codex do\", \"what did openclaw do\", \"what did copilot do\", \"peer sessions\", \"cross-agent context\", \"/tma1-peer\"."
+description: "Pull recent session content from peer coding agents (Codex, OpenCode, OpenClaw, Copilot CLI) that worked on the same project. Invoke when the user wants you to read another agent's review feedback, see what someone else tried, or act on cross-agent context. Trigger phrases: \"what did codex do\", \"what did opencode do\", \"what did openclaw do\", \"what did copilot do\", \"peer sessions\", \"cross-agent context\", \"/tma1-peer\"."
 argument-hint: "[agent] [count]"
 allowed-tools: ["mcp__tma1__get_peer_sessions"]
 ---
@@ -18,6 +18,7 @@ copy-pasting it manually.
 /tma1-peer                 # all peers, latest 1 session each
 /tma1-peer codex           # codex, latest 1 session
 /tma1-peer codex 3         # codex, latest 3 sessions
+/tma1-peer opencode        # OpenCode, latest 1
 /tma1-peer openclaw        # openclaw, latest 1
 /tma1-peer copilot 2       # copilot_cli (alias), latest 2
 /tma1-peer all 2           # all peers, 2 each
@@ -33,11 +34,12 @@ copy-pasting it manually.
    - Second token (optional): count (integer 1-5).
 2. **Normalize the agent name**:
    - `codex` → `codex`
+   - `opencode` or `open-code` → `opencode`
    - `openclaw` → `openclaw`
    - `copilot` or `copilot_cli` → `copilot_cli`
    - `all`, `*`, or empty → `""` (means all peers, excludes Claude Code)
    - a bare integer → treat as count (see step 1), `agent_source: ""`
-   - **Anything else** → reply to the user: `unknown peer agent "<X>"; available: codex, openclaw, copilot, all` and STOP — do not call the tool with an unrecognized name.
+   - **Anything else** → reply to the user: `unknown peer agent "<X>"; available: codex, opencode, openclaw, copilot, all` and STOP — do not call the tool with an unrecognized name.
 3. **Call the MCP tool `mcp__tma1__get_peer_sessions`** with:
    - `agent_source`: parsed agent (or empty string)
    - `limit`: the parsed count. **When the user gave a count, you MUST pass it**

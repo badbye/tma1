@@ -18,6 +18,9 @@ func TestNormalizePeerAgent(t *testing.T) {
 		{"*", ""},
 		{"codex", "codex"},
 		{"CODEX", "codex"},
+		{"opencode", "opencode"},
+		{"open-code", "opencode"},
+		{"open code", "opencode"},
 		{"openclaw", "openclaw"},
 		{"copilot", "copilot_cli"},     // alias
 		{"Copilot", "copilot_cli"},     // case-insensitive alias
@@ -144,13 +147,13 @@ func TestIsWindowsAbsPath(t *testing.T) {
 	}
 }
 
-func TestValidPeerAgentsCoversAllFourAdapters(t *testing.T) {
+func TestValidPeerAgentsCoversAllAdapters(t *testing.T) {
 	// Each agent that can write to tma1_hook_events / tma1_messages
 	// must be a queryable peer from every other agent's MCP tool.
 	// Codex calling with agent_source="claude_code" was rejected by
 	// an earlier draft that hard-coded CC as the caller; this test
 	// guards against that regression.
-	for _, want := range []string{"claude_code", "codex", "openclaw", "copilot_cli"} {
+	for _, want := range []string{"claude_code", "codex", "opencode", "openclaw", "copilot_cli"} {
 		if !validPeerAgents[want] {
 			t.Errorf("expected %q to be a valid peer agent", want)
 		}
@@ -195,6 +198,8 @@ func TestGetPeerSessions_RejectsCallerSelf(t *testing.T) {
 		{"claude_code", "claude"},
 		{"codex", "codex"},
 		{"codex", "CODEX"},
+		{"opencode", "opencode"},
+		{"opencode", "open-code"},
 		{"openclaw", "openclaw"},
 		{"copilot_cli", "copilot"},
 		{"copilot_cli", "copilot-cli"},
@@ -230,17 +235,18 @@ func TestPeerAgentListExcludesCaller(t *testing.T) {
 	// The empty-agent_source fan-out must exclude the caller so an
 	// agent invoking `/tma1-peer` doesn't see its own sessions
 	// returned as "peers". With Caller empty (HTTP API path) all
-	// four ship.
+	// supported agents ship.
 	cases := []struct {
 		caller string
 		want   []string
 	}{
-		{"claude_code", []string{"codex", "copilot_cli", "openclaw"}},
-		{"codex", []string{"claude_code", "copilot_cli", "openclaw"}},
-		{"openclaw", []string{"claude_code", "codex", "copilot_cli"}},
-		{"copilot_cli", []string{"claude_code", "codex", "openclaw"}},
-		{"", []string{"claude_code", "codex", "copilot_cli", "openclaw"}},
-		{"unknown_agent", []string{"claude_code", "codex", "copilot_cli", "openclaw"}},
+		{"claude_code", []string{"codex", "copilot_cli", "openclaw", "opencode"}},
+		{"codex", []string{"claude_code", "copilot_cli", "openclaw", "opencode"}},
+		{"opencode", []string{"claude_code", "codex", "copilot_cli", "openclaw"}},
+		{"openclaw", []string{"claude_code", "codex", "copilot_cli", "opencode"}},
+		{"copilot_cli", []string{"claude_code", "codex", "openclaw", "opencode"}},
+		{"", []string{"claude_code", "codex", "copilot_cli", "openclaw", "opencode"}},
+		{"unknown_agent", []string{"claude_code", "codex", "copilot_cli", "openclaw", "opencode"}},
 	}
 	for _, c := range cases {
 		b := &Bundler{Caller: c.caller}

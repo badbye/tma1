@@ -174,8 +174,11 @@ func (s *Server) Router() http.Handler {
 	// Prometheus API proxy — browser JS calls this for PromQL queries.
 	r.HandleFunc("/api/prom/*", s.handlePromProxy)
 
-	// Hook events from Claude Code / Codex.
+	// Hook events from coding agents. Conversation messages are a separate
+	// lightweight ingest path because /api/hooks intentionally only records
+	// lifecycle/tool events and returns hook-injection content.
 	r.Post("/api/hooks", s.handleHooks)
+	r.Post("/api/messages", s.handleMessages)
 	r.Get("/api/hooks/stream", s.handleHookStream)
 
 	// Anomalies aggregation for the dashboard's Anomalies tab.

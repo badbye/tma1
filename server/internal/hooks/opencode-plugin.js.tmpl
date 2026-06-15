@@ -1,0 +1,155 @@
+export const TMA1Plugin = async ({ project, directory }) => {
+  const endpoint = "http://localhost:{{PORT}}"
+  const cwd = project?.worktree || directory || process.cwd()
+  const seenMessages = new Set()
+  const seenParts = new Set()
+
+  const sessionID = (id) => id ? `opencode:${id}` : ""
+  const post = async (path, body) => {
+    try {
+      await fetch(`${endpoint}${path}`, {
+        method: "POST",
+        headers: { "content-type": "application/json" },
+        body: JSON.stringify(body),
+        signal: AbortSignal.timeout(500),
+      })
+    } catch (_) {
+      // Observability must never interrupt the agent loop.
+    }
+  }
+
+  const hook = async (rawSessionID, hook_event_name, extra = {}) => {
+    if (!rawSessionID) return
+    await post("/api/hooks?source=opencode", {
+      session_id: sessionID(rawSessionID),
+      hook_event_name,
+      cwd,
+      ...extra,
+    })
+  }
+
+  const message = async (rawSessionID, payload) => {
+    if (!rawSessionID || !payload.message_type || !payload.role) return
+    await post("/api/messages", {
+      session_id: sessionID(rawSessionID),
+      ...payload,
+    })
+  }
+
+  const textFromPart = (part) => {
+    if (!part) return ""
+    if (typeof part.text === "string") return part.text
+    if (typeof part.content === "string") return part.content
+    if (Array.isArray(part.content)) {
+      return part.content.map((item) => item?.text || "").filter(Boolean).join("\n")
+    }
+    if (part.input) return JSON.stringify(part.input)
+    if (part.result) return typeof part.result === "string" ? part.result : JSON.stringify(part.result)
+    return ""
+  }
+
+  const usagePayload = (info) => {
+    const tokens = info?.tokens || info?.usage || {}
+    const cache = tokens.cache || {}
+    return {
+      input_tokens: tokens.input,
+      output_tokens: tokens.output,
+      cache_read_tokens: cache.read,
+      cache_creation_tokens: cache.write,
+      reasoning_tokens: tokens.reasoning,
+    }
+  }
+
+  return {
+    event: async ({ event }) => {
+      const props = event?.properties || {}
+      const sid = props.sessionID
+
+      if (event.type === "session.created") {
+        await hook(sid, "SessionStart")
+        return
+      }
+      if (event.type === "session.idle") {
+        await hook(sid, "Stop")
+        return
+      }
+      if (event.type === "session.next.prompted") {
+        const prompt = props.prompt
+        const content = typeof prompt === "string" ? prompt : JSON.stringify(prompt || {})
+        await hook(sid, "UserPromptSubmit", { message: content })
+        await message(sid, { message_type: "user", role: "user", content })
+        return
+      }
+      if (event.type === "session.next.tool.called") {
+        await hook(sid, "PreToolUse", {
+          tool_name: props.tool || "",
+          tool_input: props.input || {},
+          tool_use_id: props.callID || "",
+        })
+        await message(sid, {
+          message_type: "tool_use",
+          role: "assistant",
+          content: JSON.stringify(props.input || {}),
+          tool_name: props.tool || "",
+          tool_use_id: props.callID || "",
+        })
+        return
+      }
+      if (event.type === "session.next.tool.success") {
+        const content = textFromPart({ content: props.content, result: props.result })
+        await hook(sid, "PostToolUse", {
+          tool_use_id: props.callID || "",
+          tool_response: { content, result: props.result, outputPaths: props.outputPaths, success: true },
+        })
+        await message(sid, { message_type: "tool_result", role: "tool", content, tool_use_id: props.callID || "" })
+        return
+      }
+      if (event.type === "session.next.tool.failed") {
+        const content = textFromPart({ result: props.result }) || props.error?.message || JSON.stringify(props.error || {})
+        await hook(sid, "PostToolUseFailure", {
+          tool_use_id: props.callID || "",
+          tool_response: { content, error: props.error, result: props.result, success: false },
+        })
+        await message(sid, { message_type: "tool_result", role: "tool", content, tool_use_id: props.callID || "" })
+        return
+      }
+      if (event.type === "message.updated") {
+        const info = props.info || {}
+        const key = `${sid}:${info.id}`
+        if (seenMessages.has(key)) return
+        seenMessages.add(key)
+        if (typeof info.role === "string" && typeof info.text === "string") {
+          await message(sid, {
+            message_type: info.role === "user" ? "user" : "assistant",
+            role: info.role,
+            content: info.text,
+            model: info.model?.id || "",
+            ...usagePayload(info),
+          })
+        }
+        return
+      }
+      if (event.type === "message.part.updated") {
+        const part = props.part || {}
+        const key = `${sid}:${part.id || props.time}`
+        if (seenParts.has(key)) return
+        seenParts.add(key)
+        const content = textFromPart(part)
+        if (!content) return
+        const type = part.type === "reasoning" ? "thinking" : (part.type === "tool" ? "tool_result" : "assistant")
+        await message(sid, {
+          message_type: type,
+          role: type === "tool_result" ? "tool" : "assistant",
+          content,
+          tool_name: part.name || "",
+          tool_use_id: part.callID || part.toolUseID || "",
+        })
+      }
+    },
+    "chat.message": async (input, output) => {
+      const content = (output.parts || []).map(textFromPart).filter(Boolean).join("\n")
+      await hook(input.sessionID, "UserPromptSubmit", { message: content })
+      await message(input.sessionID, { message_type: "user", role: "user", content, model: input.model?.modelID || "" })
+    },
+  }
+}

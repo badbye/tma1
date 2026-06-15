@@ -154,7 +154,7 @@ func (t PeerSessionsTool) Definition() Tool {
 	return Tool{
 		Name: "get_peer_sessions",
 		Description: "Pull recent session content from peer coding agents " +
-			"(Claude Code, Codex, OpenClaw, Copilot CLI) that worked on the " +
+			"(Claude Code, Codex, OpenCode, OpenClaw, Copilot CLI) that worked on the " +
 			"same project. Use this when the user asks you to act on feedback " +
 			"or work left by another agent, or invokes `/tma1-peer`. Filters " +
 			"by agent_source; empty string returns all peers excluding the " +
@@ -164,7 +164,7 @@ func (t PeerSessionsTool) Definition() Tool {
 			Properties: map[string]Property{
 				"agent_source": {
 					Type:        "string",
-					Description: "Peer agent: claude_code / codex / openclaw / copilot_cli. Aliases accepted: cc | claude → claude_code, copilot → copilot_cli. Empty = all peers except the caller (top N per agent).",
+					Description: "Peer agent: claude_code / codex / opencode / openclaw / copilot_cli. Aliases accepted: cc | claude -> claude_code, open-code -> opencode, copilot -> copilot_cli. Empty = all peers except the caller (top N per agent).",
 				},
 				"project": {
 					Type: "string",

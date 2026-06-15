@@ -12,6 +12,7 @@ You are helping the user query their local TMA1 observability data.
 TMA1 stores data from five kinds of sources:
 - **Claude Code** sends OTel **metrics** (cumulative counters) + **logs** (event stream) + hooks + JSONL transcripts
 - **Codex** sends OTel **logs** + **metrics** + session JSONL (auto-parsed from `~/.codex/sessions/`)
+- **OpenCode** sends normalized plugin events + messages (installed at `~/.config/opencode/plugins/tma1.js`); data lives in `tma1_hook_events` (`agent_source='opencode'`) and `tma1_messages` (`session_id LIKE 'opencode:%'`).
 - **GitHub Copilot CLI** — session JSONL only (auto-parsed from `~/.copilot/session-state/<sessionId>/events.jsonl`, no OTel). Data lives in `tma1_hook_events` (`agent_source='copilot_cli'`) and `tma1_messages` (`session_id LIKE 'cp:%'`).
 - **OpenClaw** sends OTel **traces** (spans with openclaw.* attributes) + **metrics** (openclaw_* tables) + session JSONL (auto-parsed from `~/.openclaw/agents/*/sessions/`)
 - **Other agents** (standard GenAI SDK) send OTel **traces** (spans with gen_ai.* semantic conventions)
@@ -36,6 +37,7 @@ Check which tables exist to determine what queries to use:
 - If `claude_code_cost_usage_USD_total` exists → use Claude Code metrics queries
 - If `codex_turn_token_usage_sum` or `codex_*` tables exist → use Codex queries
 - If `openclaw_tokens_total` exists → use OpenClaw queries
+- If `tma1_hook_events` has rows with `agent_source = 'opencode'` → use OpenCode/session queries
 - If `opentelemetry_traces` exists → use traces-based queries (check column names to distinguish OpenClaw vs GenAI)
 - If `opentelemetry_logs` exists → use logs queries for event details
 - If `tma1_hook_events` has rows with `agent_source = 'copilot_cli'` → use Copilot CLI queries
@@ -546,7 +548,7 @@ ORDER BY p95_ms DESC
 
 ### Sessions (from hooks + JSONL transcripts)
 
-The `tma1_messages` table includes token usage columns: `input_tokens`, `output_tokens`, `cache_read_tokens`, `cache_creation_tokens`, `duration_ms` (populated for assistant messages from JSONL transcripts). Both `tma1_hook_events` and `tma1_messages` include a `conversation_id` column linking events within the same conversation turn. Agent source is identified by `agent_source` in `tma1_hook_events`: `'claude_code'`, `'codex'`, or `'openclaw'`. OpenClaw session IDs are prefixed `oc:<agentId>:<sessionId>`.
+The `tma1_messages` table includes token usage columns: `input_tokens`, `output_tokens`, `cache_read_tokens`, `cache_creation_tokens`, `duration_ms` (populated for assistant messages from JSONL transcripts or plugin messages). Both `tma1_hook_events` and `tma1_messages` include a `conversation_id` column linking events within the same conversation turn. Agent source is identified by `agent_source` in `tma1_hook_events`: `'claude_code'`, `'codex'`, `'opencode'`, `'openclaw'`, or `'copilot_cli'`. OpenCode session IDs are prefixed `opencode:<sessionId>`; OpenClaw session IDs are prefixed `oc:<agentId>:<sessionId>`.
 
 ```sql
 -- List recent sessions with tool counts

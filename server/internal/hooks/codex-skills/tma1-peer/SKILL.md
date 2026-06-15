@@ -1,13 +1,13 @@
 ---
 name: tma1-peer
-description: "Pull recent session content from peer coding agents (Claude Code, OpenClaw, Copilot CLI) that worked on the same project. Invoke this skill when the user asks you to read another agent's review feedback, see what someone else tried, or act on cross-agent context. Trigger phrases: \"what did claude do\", \"what did openclaw do\", \"what did copilot do\", \"peer sessions\", \"cross-agent context\", \"/tma1-peer\"."
+description: "Pull recent session content from peer coding agents (Claude Code, OpenCode, OpenClaw, Copilot CLI) that worked on the same project. Invoke this skill when the user asks you to read another agent's review feedback, see what someone else tried, or act on cross-agent context. Trigger phrases: \"what did claude do\", \"what did opencode do\", \"what did openclaw do\", \"what did copilot do\", \"peer sessions\", \"cross-agent context\", \"/tma1-peer\"."
 ---
 
 # TMA1 Peer-Agent Lens (Codex)
 
 You're being invoked because the user wants to see what a peer coding agent
-left on this project — typically because they used Claude Code, OpenClaw,
-or Copilot CLI to review or run something and now want you to act on that
+left on this project — typically because they used Claude Code, OpenCode,
+OpenClaw, or Copilot CLI to review or run something and now want you to act on that
 work without copy-pasting it manually.
 
 ## How to invoke this skill
@@ -17,7 +17,7 @@ output on the current project, or when they explicitly type
 `/tma1-peer [agent] [count]`. Parse:
 
 - First positional arg (optional): peer agent name (`claude` / `claude_code`
-  / `openclaw` / `copilot` / `copilot_cli` / `all`). **If this arg is a bare
+  / `opencode` / `openclaw` / `copilot` / `copilot_cli` / `all`). **If this arg is a bare
   integer** (e.g. `/tma1-peer 3`), it is the count, not an agent — use
   `agent_source: ""` (all peers) and that integer as the count. Do not reject
   it as an unknown agent.
@@ -32,13 +32,15 @@ If neither is supplied, treat as `all` with count 1.
 | ----------------- | -------------------------------- |
 | `claude`, `cc`    | `claude_code`                    |
 | `claude_code`     | `claude_code`                    |
+| `opencode`        | `opencode`                       |
+| `open-code`       | `opencode`                       |
 | `openclaw`        | `openclaw`                       |
 | `copilot`         | `copilot_cli`                    |
 | `copilot_cli`     | `copilot_cli`                    |
 | `all`, `*`, empty | `""` (returns all non-Codex peers) |
 
 Any other value: reply
-`unknown peer agent "<X>"; available: claude, openclaw, copilot, all` and
+`unknown peer agent "<X>"; available: claude, opencode, openclaw, copilot, all` and
 STOP — do not call the tool with an unrecognised name.
 
 ## Call the tma1 MCP tool

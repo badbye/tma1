@@ -169,6 +169,14 @@ protocol = "binary"
 
 Codex uses separate exporters for logs, traces, and metrics. Restart Codex after config changes.
 
+**OpenCode** — run the installer to add the TMA1 OpenCode plugin and MCP entry:
+
+```bash
+tma1-server install --adapter opencode
+```
+
+The plugin is written to `~/.config/opencode/plugins/tma1.js`; MCP is registered in `~/.config/opencode/opencode.json`. It sends normalized hook events to `/api/hooks?source=opencode` and conversation replay rows to `/api/messages`.
+
 **OpenClaw**:
 ```bash
 openclaw config set diagnostics.enabled true

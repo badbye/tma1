@@ -45,7 +45,7 @@ type PeerMessage struct {
 }
 
 // validPeerAgents are the allowed agent_source values for cross-agent
-// lookup. All four supported agents are accepted as explicit inputs;
+// lookup. All supported agents are accepted as explicit inputs;
 // the "exclude the caller from the empty-string fan-out" semantics
 // live in GetPeerSessions, driven by the Bundler's Caller field.
 //
@@ -57,6 +57,7 @@ type PeerMessage struct {
 var validPeerAgents = map[string]bool{
 	"claude_code": true,
 	"codex":       true,
+	"opencode":    true,
 	"openclaw":    true,
 	"copilot_cli": true,
 }
@@ -164,7 +165,7 @@ func (b *Bundler) GetPeerSessions(
 	}
 	agentSource = normalizePeerAgent(agentSource)
 	if agentSource != "" && !validPeerAgents[agentSource] {
-		return nil, nil, fmt.Errorf("invalid agent_source %q (valid: claude_code, codex, openclaw, copilot_cli, or empty for all peers)", agentSource)
+		return nil, nil, fmt.Errorf("invalid agent_source %q (valid: claude_code, codex, opencode, openclaw, copilot_cli, or empty for all peers)", agentSource)
 	}
 
 	// Caller-aware self-exclusion on the explicit-agent path. The
@@ -574,7 +575,7 @@ func dedupPeerMessages(msgs []PeerMessage) []PeerMessage {
 // peerAgentList returns the validPeerAgents set with the Bundler's
 // Caller removed and sorted alphabetically for deterministic output.
 // When Caller is empty (long-running HTTP API path with no fixed
-// caller identity), all four agents are returned.
+// caller identity), all agents are returned.
 //
 // Extracted to a method so the caller-aware exclusion has a unit-test
 // foothold without standing up a fake SQL backend.
@@ -608,6 +609,8 @@ func normalizePeerAgent(s string) string {
 		return "claude_code"
 	case "copilot", "copilot-cli", "github-copilot":
 		return "copilot_cli"
+	case "open-code", "open code":
+		return "opencode"
 	}
 	return s
 }
